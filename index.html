@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Video Player</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #videoPlayer {
+            width: 80%;
+            max-width: 800px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Select a Video from Your Computer</h1>
+    <input type="file" id="videoFile" accept="video/*">
+
+    <video id="videoPlayer" controls>
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        // Get the file input and video elements
+        const videoFile = document.getElementById('videoFile');
+        const videoPlayer = document.getElementById('videoPlayer');
+
+        // Listen for when a file is selected
+        videoFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+
+            if (file) {
+                // Create a temporary URL for the selected local file
+                const fileURL = URL.createObjectURL(file);
+                
+                // Set the video source to the temporary URL and play
+                videoPlayer.src = fileURL;
+                videoPlayer.load(); // Reload the video element to pick up the new source
+                // videoPlayer.play(); // You can uncomment this to auto-play after selection
+                
+                console.log(`Video loaded: ${file.name}`);
+            }
+        });
+    </script>
+
+</body>
+</html>
