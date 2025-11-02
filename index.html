@@ -1,35 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link href="https://vjs.zencdn.net/8.23.4/video-js.css" rel="stylesheet" />
-
-  <!-- If you'd like to support IE8 (for Video.js versions prior to v7) -->
-  <!-- <script src="https://vjs.zencdn.net/ie8/1.1.2/videojs-ie8.min.js"></script> -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Media Player with Subtitles Toggle</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        #mediaPlayer {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+        }
+        #subtitleFile, #controls {
+            margin-top: 10px;
+            margin-bottom: 20px;
+            display: block;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #toggleSubtitles {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        #toggleSubtitles:hover {
+            background-color: #0056b3;
+        }
+        #toggleSubtitles:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
-
 <body>
-  <video
-    id="my-video"
-    class="video-js"
-    controls
-    preload="auto"
-    width="640"
-    height="264"
-    poster="MY_VIDEO_POSTER.jpg"
-    data-setup="{}"
-  >
-    <source src="MY_VIDEO.mp4" type="video/mp4" />
-    <source src="MY_VIDEO.webm" type="video/webm" />
-    <p class="vjs-no-js">
-      To view this video please enable JavaScript, and consider upgrading to a
-      web browser that
-      <a href="https://videojs.com/html5-video-support/" target="_blank"
-        >supports HTML5 video</a
-      >
-    </p>
-  </video>
 
-  <script src="https://vjs.zencdn.net/8.23.4/video.min.js"></script>
+    <div class="container">
+        <h1>Select a Video/Audio File</h1>
+        <input type="file" id="mediaFile" accept="video/*,audio/*,.mkv,.webm,.mp4,.mov,.ogg">
+        
+        <h2>Select Subtitle File (Optional)</h2>
+        <input type="file" id="subtitleFile" accept=".vtt">
+
+        <video id="mediaPlayer" controls preload="auto">
+            Your browser does not support the video/audio tag.
+        </video>
+        
+        <button id="toggleSubtitles" disabled>Toggle Subtitles: OFF</button>
+    </div>
+
+    <script>
+        // Get the file inputs, media element, and the new button
+        const mediaFile = document.getElementById('mediaFile');
+        const subtitleFile = document.getElementById('subtitleFile');
+        const mediaPlayer = document.getElementById('mediaPlayer');
+        const toggleButton = document.getElementById('toggleSubtitles');
+        
+        let subtitlesEnabled = true; // State tracker for the button
+
+        // Helper function to check if the selected file is video
+        function isVideo(file) {
+            return file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv');
+        }
+
+        // --- CORE TOGGLE FUNCTION ---
+        function toggleSubtitles() {
+            const tracks = mediaPlayer.textTracks; // Get the list of text tracks
+            
+            // Check if any track exists
+            if (tracks.length === 0) {
+                console.log("No subtitle track available to toggle.");
+                toggleButton.textContent = 'Toggle Subtitles: N/A';
+                toggleButton.disabled = true;
+                subtitlesEnabled = false;
+                return;
+            }
+            
+            // Iterate through all tracks (usually just one VTT track)
+            for (let i = 0; i < tracks.length; i++) {
+                const track = tracks[i];
+                if (track.kind === 'subtitles') {
+                    if (subtitlesEnabled) {
+                        // Turn OFF
+                        track.mode = 'hidden';
+                        subtitlesEnabled = false;
+                        toggleButton.textContent = 'Toggle Subtitles: OFF';
+                        console.log('Subtitles hidden.');
+                    } else {
+                        // Turn ON
+                        track.mode = 'showing';
+                        subtitlesEnabled = true;
+                        toggleButton.textContent = 'Toggle Subtitles: ON';
+                        console.log('Subtitles showing.');
+                    }
+                    break; // Assuming we only manage the first subtitle track
+                }
+            }
+        }
+        
+        // Listen for button click
+        toggleButton.addEventListener('click', toggleSubtitles);
+
+
+        // --- MEDIA FILE HANDLER (Video/Audio) ---
+        mediaFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+
+            if (file) {
+                // ... (existing logic for clearing tracks and setting URL)
+                const fileURL = URL.createObjectURL(file);
+                while (mediaPlayer.firstChild) {
+                    mediaPlayer.removeChild(mediaPlayer.firstChild);
+                }
+                mediaPlayer.src = fileURL;
+                if (!isVideo(file)) {
+                    mediaPlayer.style.height = '50px'; 
+                } else {
+                    mediaPlayer.style.height = ''; 
+                }
+                mediaPlayer.load(); 
+                
+                // Reset button state when new media is loaded
+                toggleButton.textContent = 'Toggle Subtitles: N/A';
+                toggleButton.disabled = true;
+                subtitlesEnabled = false;
+                subtitleFile.value = ''; // Clear subtitle input
+            }
+        });
+
+
+        // --- SUBTITLE FILE HANDLER (.vtt) ---
+        subtitleFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            const tracks = mediaPlayer.textTracks;
+
+            if (file && mediaPlayer.src) {
+                
+                // 1. Remove any previously added <track> elements
+                const existingTracks = mediaPlayer.querySelectorAll('track');
+                existingTracks.forEach(track => track.remove());
+                
+                // 2. Create and append the new track
+                const subtitleURL = URL.createObjectURL(file);
+                const track = document.createElement('track');
+                track.kind = 'subtitles';
+                track.label = file.name || 'Subtitles';
+                track.srclang = 'en'; 
+                track.src = subtitleURL;
+                track.default = true; // Set as default, so it's initially 'showing'
+                mediaPlayer.appendChild(track);
+                
+                mediaPlayer.load();
+                console.log(`Subtitle loaded: ${file.name}`);
+                
+                // 3. Update the button to initial ON state
+                toggleButton.disabled = false;
+                toggleButton.textContent = 'Toggle Subtitles: ON';
+                subtitlesEnabled = true;
+
+            } else if (file && !mediaPlayer.src) {
+                 alert("Please select a video or audio file first before loading subtitles.");
+                 subtitleFile.value = ''; 
+            }
+        });
+    </script>
+
 </body>
-</html>
-
+</html> 
