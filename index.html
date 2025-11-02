@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local Media Player with Subtitles Toggle</title>
+    <title>Local Media Player with Native Controls</title>
     <style>
         body {
             font-family: sans-serif;
@@ -22,35 +22,19 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
+        /* The video element uses 100% width within the container */
         #mediaPlayer {
             width: 100%;
             max-width: 800px;
             margin-top: 20px;
             border: 1px solid #ccc;
         }
-        #subtitleFile, #controls {
+        #subtitleFile {
             margin-top: 10px;
             margin-bottom: 20px;
             display: block;
             width: 100%;
             box-sizing: border-box;
-        }
-        #toggleSubtitles {
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-        #toggleSubtitles:hover {
-            background-color: #0056b3;
-        }
-        #toggleSubtitles:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
         }
     </style>
 </head>
@@ -67,85 +51,50 @@
             Your browser does not support the video/audio tag.
         </video>
         
-        <button id="toggleSubtitles" disabled>Toggle Subtitles: OFF</button>
-    </div>
+        </div>
 
     <script>
-        // Get the file inputs, media element, and the new button
+        // Get the file inputs and media element
         const mediaFile = document.getElementById('mediaFile');
         const subtitleFile = document.getElementById('subtitleFile');
         const mediaPlayer = document.getElementById('mediaPlayer');
-        const toggleButton = document.getElementById('toggleSubtitles');
-        
-        let subtitlesEnabled = true; // State tracker for the button
 
         // Helper function to check if the selected file is video
         function isVideo(file) {
             return file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv');
         }
 
-        // --- CORE TOGGLE FUNCTION ---
-        function toggleSubtitles() {
-            const tracks = mediaPlayer.textTracks; // Get the list of text tracks
-            
-            // Check if any track exists
-            if (tracks.length === 0) {
-                console.log("No subtitle track available to toggle.");
-                toggleButton.textContent = 'Toggle Subtitles: N/A';
-                toggleButton.disabled = true;
-                subtitlesEnabled = false;
-                return;
-            }
-            
-            // Iterate through all tracks (usually just one VTT track)
-            for (let i = 0; i < tracks.length; i++) {
-                const track = tracks[i];
-                if (track.kind === 'subtitles') {
-                    if (subtitlesEnabled) {
-                        // Turn OFF
-                        track.mode = 'hidden';
-                        subtitlesEnabled = false;
-                        toggleButton.textContent = 'Toggle Subtitles: OFF';
-                        console.log('Subtitles hidden.');
-                    } else {
-                        // Turn ON
-                        track.mode = 'showing';
-                        subtitlesEnabled = true;
-                        toggleButton.textContent = 'Toggle Subtitles: ON';
-                        console.log('Subtitles showing.');
-                    }
-                    break; // Assuming we only manage the first subtitle track
-                }
-            }
-        }
-        
-        // Listen for button click
-        toggleButton.addEventListener('click', toggleSubtitles);
-
-
         // --- MEDIA FILE HANDLER (Video/Audio) ---
         mediaFile.addEventListener('change', (event) => {
             const file = event.target.files[0];
 
             if (file) {
-                // ... (existing logic for clearing tracks and setting URL)
                 const fileURL = URL.createObjectURL(file);
+                
+                // 1. Clear existing tracks
                 while (mediaPlayer.firstChild) {
                     mediaPlayer.removeChild(mediaPlayer.firstChild);
                 }
+                
+                // 2. Set the media source
                 mediaPlayer.src = fileURL;
+                
+                // 3. Adjust display for audio-only files
                 if (!isVideo(file)) {
                     mediaPlayer.style.height = '50px'; 
                 } else {
                     mediaPlayer.style.height = ''; 
                 }
+                
+                // 4. Set volume properties for a better starting experience (Fixes the no-sound issue if muted)
+                mediaPlayer.volume = 0.5; // Set volume to 50%
+                mediaPlayer.muted = false; // Ensure it is not muted
+                
                 mediaPlayer.load(); 
                 
-                // Reset button state when new media is loaded
-                toggleButton.textContent = 'Toggle Subtitles: N/A';
-                toggleButton.disabled = true;
-                subtitlesEnabled = false;
-                subtitleFile.value = ''; // Clear subtitle input
+                // Clear subtitle input for a fresh start
+                subtitleFile.value = ''; 
+                console.log(`Media loaded: ${file.name}`);
             }
         });
 
@@ -153,7 +102,6 @@
         // --- SUBTITLE FILE HANDLER (.vtt) ---
         subtitleFile.addEventListener('change', (event) => {
             const file = event.target.files[0];
-            const tracks = mediaPlayer.textTracks;
 
             if (file && mediaPlayer.src) {
                 
@@ -168,16 +116,14 @@
                 track.label = file.name || 'Subtitles';
                 track.srclang = 'en'; 
                 track.src = subtitleURL;
-                track.default = true; // Set as default, so it's initially 'showing'
+                track.default = true; // Makes the track active by default
                 mediaPlayer.appendChild(track);
                 
                 mediaPlayer.load();
-                console.log(`Subtitle loaded: ${file.name}`);
                 
-                // 3. Update the button to initial ON state
-                toggleButton.disabled = false;
-                toggleButton.textContent = 'Toggle Subtitles: ON';
-                subtitlesEnabled = true;
+                // The native controls menu (usually a small "CC" icon) will now appear 
+                // on the video player, allowing the user to select or disable the subtitles.
+                console.log(`Subtitle loaded: ${file.name}. Check the native player controls for selection.`);
 
             } else if (file && !mediaPlayer.src) {
                  alert("Please select a video or audio file first before loading subtitles.");
@@ -187,4 +133,4 @@
     </script>
 
 </body>
-</html> 
+</html>
